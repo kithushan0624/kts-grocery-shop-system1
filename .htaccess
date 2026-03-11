@@ -1,0 +1,106 @@
+# ============================================================
+#  KTS GROCERY SHOP — Apache .htaccess
+#  Security, caching, and access control for hosting
+# ============================================================
+
+# ---- PHP Settings (for shared hosting) -----
+php_flag display_errors Off
+php_flag log_errors On
+php_value error_log logs/php_errors.log
+
+# ---- Charset & MIME ----
+AddDefaultCharset UTF-8
+
+# ============================================================
+#  BLOCK DIRECT ACCESS TO SENSITIVE DIRECTORIES
+# ============================================================
+
+# Block access to config directory
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Block config/ directory
+  RewriteRule ^config(/.*)?$ - [F,L]
+
+  # Block includes/ directory (admin layout partials)
+  RewriteRule ^includes(/.*)?$ - [F,L]
+
+  # Block setup/ directory after installation
+  # To run install again: temporarily comment out this rule
+  RewriteRule ^setup(/.*)?$ - [F,L]
+
+  # Block shop/includes/ directory
+  RewriteRule ^shop/includes(/.*)?$ - [F,L]
+</IfModule>
+
+# ---- Block sensitive file types ----
+<FilesMatch "\.(log|sql|sh|env|bak|swp|gitignore|md|lock)$">
+  Order Allow,Deny
+  Deny from all
+</FilesMatch>
+
+# ---- Block hidden files (dot files like .git, .env) ----
+<FilesMatch "^\.">
+  Order Allow,Deny
+  Deny from all
+</FilesMatch>
+
+# ---- Block debug and temp files ----
+<FilesMatch "^(debug|error|phpinfo|test|migrate_|session_debug)">
+  Order Allow,Deny
+  Deny from all
+</FilesMatch>
+
+# ============================================================
+#  BROWSER CACHING (speeds up page loads)
+# ============================================================
+<IfModule mod_expires.c>
+  ExpiresActive On
+
+  # Images
+  ExpiresByType image/jpeg "access plus 1 month"
+  ExpiresByType image/png  "access plus 1 month"
+  ExpiresByType image/webp "access plus 1 month"
+  ExpiresByType image/gif  "access plus 1 month"
+  ExpiresByType image/svg+xml "access plus 1 month"
+  ExpiresByType image/x-icon "access plus 1 year"
+
+  # CSS & JavaScript
+  ExpiresByType text/css              "access plus 1 week"
+  ExpiresByType application/javascript "access plus 1 week"
+  ExpiresByType text/javascript        "access plus 1 week"
+
+  # Fonts
+  ExpiresByType font/woff2 "access plus 1 year"
+  ExpiresByType font/woff  "access plus 1 year"
+</IfModule>
+
+# ============================================================
+#  GZIP COMPRESSION (faster page loads)
+# ============================================================
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/css
+  AddOutputFilterByType DEFLATE application/javascript text/javascript
+  AddOutputFilterByType DEFLATE application/json
+  AddOutputFilterByType DEFLATE image/svg+xml
+</IfModule>
+
+# ============================================================
+#  SECURITY HEADERS
+# ============================================================
+<IfModule mod_headers.c>
+  # Prevent MIME sniffing
+  Header always set X-Content-Type-Options "nosniff"
+
+  # Prevent clickjacking
+  Header always set X-Frame-Options "SAMEORIGIN"
+
+  # XSS Protection
+  Header always set X-XSS-Protection "1; mode=block"
+
+  # Remove server signature
+  Header unset Server
+</IfModule>
+
+# Disable server signature
+ServerSignature Off

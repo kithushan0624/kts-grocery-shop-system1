@@ -182,9 +182,14 @@ $suppliers = $db->query("SELECT id, name FROM suppliers WHERE status='active' OR
         </div>
         <div class="modal-body">
             <p style="color:var(--text-secondary);font-size:13px;margin-bottom:12px;">Point your camera at the product barcode.</p>
-            <div class="scanner-box" id="formScannerBox">
-                <div id="formInteractive" class="viewport" style="min-height:200px;"></div>
-                <div class="scanner-line"></div>
+            <div class="scanner-box" id="formScannerBox" style="position:relative; min-height:250px; background:#000; border:2px solid var(--border); border-radius:8px; overflow:hidden;">
+                <div id="formInteractive" style="width:100%; height:250px;"></div>
+                <div class="scanner-line" style="position: absolute; top: 50%; left: 0; right: 0; height: 2px; background: rgba(255,0,0,0.5); box-shadow: 0 0 10px red; z-index: 10; pointer-events: none;"></div>
+                <div id="formFlashToggle" style="display:none; position: absolute; bottom: 15px; right: 15px; z-index: 20;">
+                    <button class="btn btn-secondary btn-sm" onclick="toggleFormFlash()" style="border-radius: 50%; width: 40px; height: 40px; padding: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); border-color: rgba(255,255,255,0.2);">
+                        <i class="bi bi-lightning-fill" id="formFlashIcon"></i>
+                    </button>
+                </div>
             </div>
             <p style="margin-top:10px;font-size:12px;color:var(--text-muted);">Detected: <span id="formScanResult" style="color:var(--accent);font-weight:600;">—</span></p>
         </div>
@@ -194,9 +199,11 @@ $suppliers = $db->query("SELECT id, name FROM suppliers WHERE status='active' OR
 <div id="toast-container"></div>
 
 <script src="../assets/js/app.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
 let formScanTarget = null;
+let formQrScanner = null;
+let formFlashEnabled = false;
 
 function loadProducts() {
     const search = document.getElementById('searchInput').value;
@@ -377,43 +384,108 @@ function openBarcodeModal(targetInputId) {
     startFormScanner();
 }
 
-function startFormScanner() {
-    Quagga.init({
-        inputStream: { 
-            type:'LiveStream', 
-            target: document.getElementById('formInteractive'), 
-            constraints:{ 
-                width: { min: 320 },
-                height: { min: 200 },
-                facingMode:'environment' 
-            } 
+async function startFormScanner() {
+    if (!formQrScanner) {
+        formQrScanner = new Html5Qrcode("formInteractive", {
+            verbose: false,
+            experimentalFeatures: {
+                useBarCodeDetectorIfSupported: true
+            }
+        });
+    }
+    
+    document.getElementById('formScanResult').textContent = '—';
+    
+    const config = { 
+        fps: 20, 
+        qrbox: (viewfinderWidth, viewfinderHeight) => {
+            const width = viewfinderWidth * 0.85;
+            const height = Math.min(viewfinderHeight * 0.45, 180);
+            return { width, height };
         },
-        locator: { patchSize: 'medium', halfSample: true },
-        numOfWorkers: 2,
-        decoder: { 
-            readers:['ean_reader','ean_8_reader','code_128_reader','upc_reader','upc_e_reader'] 
-        },
-        locate: true
-    }, err => {
-        if (err) { 
-            console.error(err);
-            showToast('Could not access camera: '+err,'error'); 
-            return; 
-        }
-        Quagga.start();
-    });
-    Quagga.onDetected(data => {
-        const code = data.codeResult.code;
-        document.getElementById('formScanResult').textContent = code;
-        document.getElementById(formScanTarget).value = code;
-        stopFormScanner();
-        showToast('Barcode scanned: '+code,'success');
-    });
+        aspectRatio: 1.777778,
+        formatsToSupport: [ 
+            Html5QrcodeSupportedFormats.EAN_13, 
+            Html5QrcodeSupportedFormats.CODE_128, 
+            Html5QrcodeSupportedFormats.EAN_8, 
+            Html5QrcodeSupportedFormats.UPC_A, 
+            Html5QrcodeSupportedFormats.UPC_E,
+            Html5QrcodeSupportedFormats.CODE_39
+        ]
+    };
+
+    try {
+        await formQrScanner.start(
+            { facingMode: "environment" }, 
+            config,
+            (decodedText) => {
+                document.getElementById('formScanResult').textContent = decodedText;
+                document.getElementById(formScanTarget).value = decodedText;
+                
+                // Visual feedback
+                const box = document.getElementById('formScannerBox');
+                box.style.borderColor = '#10b981';
+                box.style.boxShadow = '0 0 20px rgba(16, 185, 129, 0.4)';
+                
+                // Audio Feedback
+                try {
+                    const audio = new Audio('https://www.soundjay.com/buttons/beep-07a.mp3');
+                    audio.play();
+                } catch(e){}
+
+                setTimeout(() => {
+                    stopFormScanner();
+                    showToast('Barcode scanned: ' + decodedText, 'success');
+                }, 500);
+            }
+        );
+
+        // Check flash support
+        setTimeout(() => {
+            const hasFlash = formQrScanner.getRunningTrackCapabilities().torch;
+            if (hasFlash) {
+                document.getElementById('formFlashToggle').style.display = 'block';
+            }
+        }, 1000);
+
+    } catch (err) {
+        console.error("Scanner error", err);
+        showToast('Could not access camera: ' + err, 'error');
+        closeModal('barcodeFormModal');
+    }
 }
 
-function stopFormScanner() {
-    try { Quagga.stop(); } catch(e) {}
+async function stopFormScanner() {
+    if (formQrScanner) {
+        try {
+            await formQrScanner.stop();
+            formFlashEnabled = false;
+            document.getElementById('formFlashToggle').style.display = 'none';
+            document.getElementById('formFlashIcon').className = 'bi bi-lightning-fill';
+        } catch (err) {
+            console.error("Failed to stop scanner", err);
+        }
+    }
     closeModal('barcodeFormModal');
+    // Reset visual feedback
+    const box = document.getElementById('formScannerBox');
+    box.style.borderColor = 'var(--border)';
+    box.style.boxShadow = 'none';
+}
+
+async function toggleFormFlash() {
+    if (!formQrScanner) return;
+    try {
+        formFlashEnabled = !formFlashEnabled;
+        await formQrScanner.applyVideoConstraints({
+            advanced: [{ torch: formFlashEnabled }]
+        });
+        document.getElementById('formFlashIcon').className = formFlashEnabled ? 'bi bi-lightning-charge-fill' : 'bi bi-lightning-fill';
+        document.getElementById('formFlashIcon').parentElement.style.color = formFlashEnabled ? 'var(--amber)' : '#fff';
+    } catch (err) {
+        console.error("Flash error", err);
+        showToast('Flash not available', 'warning');
+    }
 }
 
 function escHtml(str) { return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }

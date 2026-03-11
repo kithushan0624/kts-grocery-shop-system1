@@ -121,16 +121,16 @@ $zones = $db->query("SELECT * FROM delivery_zones ORDER BY name ASC")->fetchAll(
                 
                 <div class="summary-row">
                     <span>Items Total</span>
-                    <span id="itemsSubtotal"><?= $currency ?> 0.00</span>
+                    <span id="itemsSubtotal"><?= htmlspecialchars($currency) ?> 0.00</span>
                 </div>
                 <div class="summary-row">
                     <span>Delivery Fee</span>
-                    <span id="checkoutCharge"><?= $currency ?> 0.00</span>
+                    <span id="checkoutCharge"><?= htmlspecialchars($currency) ?> 0.00</span>
                 </div>
                 
                 <div class="summary-row total" style="margin-top: 15px; border-top: 1px solid var(--shop-border-light); padding-top: 15px;">
                     <span>Total:</span>
-                    <span id="checkoutTotal" style="color: #2563eb; font-size: 20px;"><?= $currency ?> 0.00</span>
+                    <span id="checkoutTotal" style="color: #2563eb; font-size: 20px;"><?= htmlspecialchars($currency) ?> 0.00</span>
                 </div>
                 <div class="checkout-vat-note">VAT included, where applicable</div>
                 
@@ -208,7 +208,7 @@ $zones = $db->query("SELECT * FROM delivery_zones ORDER BY name ASC")->fetchAll(
     <div style="background:var(--shop-surface);border:1px solid var(--shop-border);border-radius:var(--shop-radius-xl);padding:40px;text-align:center;max-width:400px;width:90%;">
         <div style="font-size:40px;color:var(--shop-accent);margin-bottom:20px;"><i class="bi bi-shield-check"></i></div>
         <h2 style="font-size:20px;font-weight:700;color:#fff;margin-bottom:10px;">Secure Payment</h2>
-        <p style="color:var(--shop-text-secondary);margin-bottom:20px;">You are paying <span style="color:var(--shop-accent); font-weight:700;"><?= $currency ?> <span id="modalPayable">0.00</span></span></p>
+        <p style="color:var(--shop-text-secondary);margin-bottom:20px;">You are paying <span style="color:var(--shop-accent); font-weight:700;"><?= htmlspecialchars($currency) ?> <span id="modalPayable">0.00</span></span></p>
         
         <div style="text-align:left; margin-bottom:25px;">
             <div class="form-group">

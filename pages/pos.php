@@ -63,9 +63,14 @@ $db = getDB();
             </div>
 
             <div id="cameraSection" style="display:none; padding:12px; background:var(--bg-secondary); border-bottom:1px solid var(--border);">
-                <div class="scanner-box" style="max-height: 200px;">
-                    <div id="posInteractive" class="viewport"></div>
-                    <div class="scanner-line"></div>
+                <div class="scanner-box" style="position:relative; min-height: 250px; background: #000; border: 2px solid var(--accent); border-radius: 8px; overflow: hidden;">
+                    <div id="posInteractive" style="width: 100%; height: 250px;"></div>
+                    <div class="scanner-line" style="position: absolute; top: 50%; left: 0; right: 0; height: 2px; background: rgba(255,0,0,0.5); box-shadow: 0 0 10px red; z-index: 10; pointer-events: none;"></div>
+                    <div id="flashToggle" style="display:none; position: absolute; bottom: 15px; right: 15px; z-index: 20;">
+                        <button class="btn btn-secondary btn-sm" onclick="toggleFlash()" style="border-radius: 50%; width: 40px; height: 40px; padding: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); border-color: rgba(255,255,255,0.2);">
+                            <i class="bi bi-lightning-fill" id="flashIcon"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -234,12 +239,14 @@ $db = getDB();
 <div id="toast-container"></div>
 
 <script src="../assets/js/app.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
 let cart = [];
 let paymentMethod = 'cash';
 let allPOSProducts = [];
 let cameraActive = false;
+let html5QrCode = null;
+let flashEnabled = false;
 let lastScanned = '';
 let pendingMeasureProductId = null;
 let editingCartIndex = null;
@@ -574,31 +581,114 @@ function toggleCamera() {
     else startCamera();
 }
 
-function startCamera() {
+async function startCamera() {
     const section = document.getElementById('cameraSection');
     section.style.display = 'block';
-    Quagga.init({
-        inputStream: { type: 'LiveStream', target: document.getElementById('posInteractive'), constraints: { width: 320, height: 200, facingMode: 'environment' } },
-        locator: { patchSize: 'medium', halfSample: true },
-        numOfWorkers: 2,
-        decoder: { readers: ['ean_reader','ean_8_reader','code_128_reader','upc_reader','upc_e_reader'] },
-        locate: true
-    }, err => {
-        if (err) { showToast('Camera error: '+err, 'error'); section.style.display='none'; return; }
-        cameraActive = true;
-        Quagga.start();
-    });
+    
+    if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("posInteractive", { 
+            verbose: false,
+            experimentalFeatures: {
+                useBarCodeDetectorIfSupported: true
+            }
+        });
+    }
+    
+    cameraActive = true;
+    const config = { 
+        fps: 20, 
+        qrbox: (viewfinderWidth, viewfinderHeight) => {
+            // Optimized for 1D Barcodes: wide and short
+            const width = viewfinderWidth * 0.85;
+            const height = Math.min(viewfinderHeight * 0.45, 180);
+            return { width, height };
+        },
+        aspectRatio: 1.777778, // 16:9
+        formatsToSupport: [ 
+            Html5QrcodeSupportedFormats.EAN_13, 
+            Html5QrcodeSupportedFormats.CODE_128, 
+            Html5QrcodeSupportedFormats.EAN_8, 
+            Html5QrcodeSupportedFormats.UPC_A, 
+            Html5QrcodeSupportedFormats.UPC_E,
+            Html5QrcodeSupportedFormats.CODE_39
+        ]
+    };
 
-    Quagga.onDetected(async data => {
-        const code = data.codeResult.code;
-        if (code === lastScanned) return;
-        lastScanned = code;
-        document.getElementById('barcodeInput').value = code;
-        searchProduct();
-        setTimeout(() => { lastScanned = ''; }, 2000);
-    });
+    try {
+        await html5QrCode.start(
+            { facingMode: "environment" }, 
+            config,
+            (decodedText) => {
+                if (decodedText === lastScanned) return;
+                lastScanned = decodedText;
+                document.getElementById('barcodeInput').value = decodedText;
+                
+                // Audio feedback if possible
+                try {
+                    const audio = new Audio('https://www.soundjay.com/buttons/beep-07a.mp3');
+                    audio.play();
+                } catch(e){}
+
+                searchProduct();
+                
+                // Visual feedback
+                const box = document.querySelector('.scanner-box');
+                box.style.borderColor = '#10b981';
+                box.style.boxShadow = '0 0 20px rgba(16, 185, 129, 0.4)';
+                
+                setTimeout(() => { 
+                    box.style.borderColor = 'var(--accent)'; 
+                    box.style.boxShadow = 'none';
+                    lastScanned = ''; 
+                }, 2000);
+            }
+        );
+
+        // Check flash support
+        setTimeout(() => {
+            const hasFlash = html5QrCode.getRunningTrackCapabilities().torch;
+            if (hasFlash) {
+                document.getElementById('flashToggle').style.display = 'block';
+            }
+        }, 1000);
+
+    } catch (err) {
+        console.error("Camera error", err);
+        showToast('Camera error: ' + err, 'error');
+        section.style.display = 'none';
+        cameraActive = false;
+    }
 }
-function stopCamera() { try { Quagga.stop(); } catch(e) {} cameraActive = false; document.getElementById('cameraSection').style.display = 'none'; }
+
+async function stopCamera() {
+    if (html5QrCode && cameraActive) {
+        try {
+            await html5QrCode.stop();
+            cameraActive = false;
+            flashEnabled = false;
+            document.getElementById('flashToggle').style.display = 'none';
+            document.getElementById('flashIcon').className = 'bi bi-lightning-fill';
+            document.getElementById('cameraSection').style.display = 'none';
+        } catch (err) {
+            console.error("Failed to stop camera", err);
+        }
+    }
+}
+
+async function toggleFlash() {
+    if (!html5QrCode || !cameraActive) return;
+    try {
+        flashEnabled = !flashEnabled;
+        await html5QrCode.applyVideoConstraints({
+            advanced: [{ torch: flashEnabled }]
+        });
+        document.getElementById('flashIcon').className = flashEnabled ? 'bi bi-lightning-charge-fill' : 'bi bi-lightning-fill';
+        document.getElementById('flashIcon').parentElement.style.color = flashEnabled ? 'var(--amber)' : '#fff';
+    } catch (err) {
+        console.error("Flash error", err);
+        showToast('Flash not available', 'warning');
+    }
+}
 
 // ===== CART =====
 function addToCart(productId, productData = null, manualQty = null) {

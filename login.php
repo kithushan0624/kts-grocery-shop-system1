@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($user['role'] === 'cashier') {
                 header('Location: pages/pos.php');
             } elseif ($user['role'] === 'supplier') {
-                header('Location: pages/suppliers.php');
+                header('Location: pages/supplier_dashboard.php');
             } elseif ($user['role'] === 'customer') {
                 header('Location: pages/customers.php');
             } else {

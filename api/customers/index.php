@@ -33,13 +33,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $name = trim($_POST['name']??'');
         $phone = trim($_POST['phone']??'');
         $email = trim($_POST['email']??'');
+        $username = trim($_POST['username']??'');
+        $password = trim($_POST['password']??'');
         $address = trim($_POST['address']??'');
         if (!$name) jsonResponse(['success'=>false,'message'=>'Name required']);
+
+        // Check unique username
+        if ($username) {
+            $check = $db->prepare("SELECT id FROM customers WHERE username = ? AND id != ?");
+            $check->execute([$username, $id]);
+            if ($check->fetch()) jsonResponse(['success'=>false,'message'=>'Username already taken']);
+        }
+
         if ($id > 0) {
-            $db->prepare("UPDATE customers SET name=?,phone=?,email=?,address=? WHERE id=?")->execute([$name,$phone,$email,$address,$id]);
+            $sql = "UPDATE customers SET name=?, phone=?, email=?, address=?, username=?";
+            $params = [$name, $phone, $email, $address, $username];
+            if ($password) {
+                $sql .= ", password=?";
+                $params[] = password_hash($password, PASSWORD_DEFAULT);
+            }
+            $sql .= " WHERE id=?";
+            $params[] = $id;
+            $db->prepare($sql)->execute($params);
             jsonResponse(['success'=>true,'message'=>'Customer updated.']);
         } else {
-            $db->prepare("INSERT INTO customers (name,phone,email,address) VALUES (?,?,?,?)")->execute([$name,$phone,$email,$address]);
+            $hash = $password ? password_hash($password, PASSWORD_DEFAULT) : null;
+            $db->prepare("INSERT INTO customers (name,phone,email,address,username,password) VALUES (?,?,?,?,?,?)")
+               ->execute([$name,$phone,$email,$address,$username,$hash]);
             jsonResponse(['success'=>true,'message'=>'Customer added.','id'=>$db->lastInsertId()]);
         }
     }

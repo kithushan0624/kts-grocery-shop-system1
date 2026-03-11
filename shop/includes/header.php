@@ -134,7 +134,31 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                 </form>
             </div>
 
-            <div class="shop-nav-links">
+            <!-- Mobile: Cart shortcut + Hamburger -->
+            <div class="mobile-nav-actions">
+                <a href="cart.php" class="mobile-cart-btn">
+                    <i class="bi bi-basket2"></i>
+                    <span id="cartCountMobile" class="cart-count">0</span>
+                </a>
+                <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Open menu">
+                    <span class="hamburger-line"></span>
+                    <span class="hamburger-line"></span>
+                    <span class="hamburger-line"></span>
+                </button>
+            </div>
+
+            <!-- Mobile overlay -->
+            <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
+
+            <div class="shop-nav-links" id="shopNavLinks">
+                <!-- Mobile search (shown inside mobile menu) -->
+                <div class="mobile-search-bar">
+                    <form action="products.php" method="GET">
+                        <i class="bi bi-search"></i>
+                        <input type="text" name="search" placeholder="Search for groceries..." value="<?= isset($_GET['search']) ? htmlspecialchars($_GET['search']) : '' ?>">
+                    </form>
+                </div>
+
                 <a href="index.php" class="<?= $currentPage === 'index.php' ? 'active' : '' ?>">
                     <i class="bi bi-house"></i><span>Home</span>
                 </a>
@@ -154,7 +178,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                         <i class="bi bi-receipt"></i><span>Orders</span>
                     </a>
                     <a href="logout.php" class="nav-logout" title="Logout">
-                        <i class="bi bi-box-arrow-right"></i>
+                        <i class="bi bi-box-arrow-right"></i><span>Logout</span>
                     </a>
                 <?php else: ?>
                     <a href="login.php" class="<?= $currentPage === 'login.php' ? 'active' : '' ?>">
@@ -165,8 +189,54 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                     </a>
                 <?php endif; ?>
             </div>
+            </div>
         </nav>
     </div>
 
     <!-- Main Content Start -->
     <main>
+
+    <script>
+    // Mobile menu toggle
+    (function() {
+        const toggle = document.getElementById('mobileMenuToggle');
+        const nav = document.getElementById('shopNavLinks');
+        const overlay = document.getElementById('mobileNavOverlay');
+        if (!toggle || !nav) return;
+
+        function openMenu() {
+            nav.classList.add('mobile-open');
+            toggle.classList.add('active');
+            overlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeMenu() {
+            nav.classList.remove('mobile-open');
+            toggle.classList.remove('active');
+            overlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        toggle.addEventListener('click', function() {
+            nav.classList.contains('mobile-open') ? closeMenu() : openMenu();
+        });
+        overlay.addEventListener('click', closeMenu);
+
+        // Close on nav link click
+        nav.querySelectorAll('a').forEach(function(link) {
+            link.addEventListener('click', closeMenu);
+        });
+
+        // Sync mobile cart badge
+        const orig = window.SHOP_CART.updateBadge;
+        window.SHOP_CART.updateBadge = function() {
+            orig.call(this);
+            const mob = document.getElementById('cartCountMobile');
+            if (mob) {
+                const count = this.items.reduce((s, i) => s + i.quantity, 0);
+                mob.textContent = count;
+                mob.style.display = count > 0 ? 'flex' : 'none';
+            }
+        };
+    })();
+    </script>

@@ -124,7 +124,7 @@ $topQtys = json_encode(array_column($topProducts, 'qty_sold'));
             <div class="stat-icon green"><i class="bi bi-cash-coin"></i></div>
             <div class="stat-info">
                 <div class="stat-label">Today's Sales</div>
-                <div class="stat-value text-green"><?= CURRENCY ?> <?= number_format($todayStats['total_sales'], 2) ?></div>
+                <div class="stat-value text-green"><?= CURRENCY ?>&nbsp;<?= number_format($todayStats['total_sales'], 2) ?></div>
                 <div class="stat-change"><?= $todayStats['trans_count'] ?> transactions today</div>
             </div>
         </div>
@@ -157,7 +157,7 @@ $topQtys = json_encode(array_column($topProducts, 'qty_sold'));
             <div class="stat-icon cyan"><i class="bi bi-cart-check"></i></div>
             <div class="stat-info">
                 <div class="stat-label">Online Sales</div>
-                <div class="stat-value text-cyan"><?= CURRENCY ?> <?= number_format($onlineSales, 0) ?></div>
+                <div class="stat-value text-cyan"><?= CURRENCY ?>&nbsp;<?= number_format($onlineSales, 0) ?></div>
                 <div class="stat-change">Today's online revenue</div>
             </div>
         </div>
@@ -165,7 +165,7 @@ $topQtys = json_encode(array_column($topProducts, 'qty_sold'));
             <div class="stat-icon amber"><i class="bi bi-wallet2"></i></div>
             <div class="stat-info">
                 <div class="stat-label">Unpaid Amount</div>
-                <div class="stat-value text-amber"><?= CURRENCY ?> <?= number_format($unpaidAmount, 0) ?></div>
+                <div class="stat-value text-amber"><?= CURRENCY ?>&nbsp;<?= number_format($unpaidAmount, 0) ?></div>
                 <div class="stat-change">Monthly unpaid orders value</div>
             </div>
         </div>
@@ -211,8 +211,13 @@ $topQtys = json_encode(array_column($topProducts, 'qty_sold'));
                 <div style="font-size:12px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;"><i class="bi bi-exclamation-triangle-fill"></i> Low Stock</div>
                 <?php foreach ($lowStockItems as $item): ?>
                 <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg-secondary);border-radius:8px;margin-bottom:6px;">
-                    <span style="font-size:13px;"><i class="bi bi-box-seam" style="color:var(--text-muted);"></i> <?= htmlspecialchars($item['name']) ?></span>
-                    <span class="badge badge-red"><?= $item['quantity'] ?> left</span>
+                    <div style="display:flex;flex-direction:column;gap:4px;">
+                        <span style="font-size:13px;"><i class="bi bi-box-seam" style="color:var(--text-muted);"></i> <?= htmlspecialchars($item['name']) ?></span>
+                        <span class="badge badge-red" style="width:fit-content;"><?= $item['quantity'] ?> left (Min: <?= $item['min_stock'] ?>)</span>
+                    </div>
+                    <?php if (in_array($_SESSION['role'] ?? '', ['admin'])): ?>
+                    <a href="supply_requests.php?action=create&product=<?= urlencode($item['name']) ?>" class="btn btn-sm btn-primary" style="padding:4px 8px;font-size:11px;"><i class="bi bi-truck"></i> Restock</a>
+                    <?php endif; ?>
                 </div>
                 <?php endforeach; ?>
             </div>

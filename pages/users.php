@@ -20,7 +20,7 @@ $db = getDB();
 <div class="page-content">
     <div class="page-header">
         <div><h1>User Management <i class="bi bi-person-gear" style="color:var(--accent);"></i></h1><p>Manage system users and roles (Admin only)</p></div>
-        <div class="header-actions"><button class="btn btn-primary" onclick="openModal('userModal')"><i class="bi bi-plus-lg"></i> Add User</button></div>
+        <div class="header-actions"><button class="btn btn-primary" onclick="addUser()"><i class="bi bi-plus-lg"></i> Add User</button></div>
     </div>
     <div class="card" style="padding:0;"><div id="userTableWrap"><div style="text-align:center;padding:40px;"><div class="loading-spinner"></div></div></div></div>
 </div></div></div>
@@ -38,13 +38,24 @@ $db = getDB();
                 <div class="form-row cols-2">
                     <div class="form-group"><label class="form-label">Email</label><input type="email" name="email" id="uEmail" class="form-control"></div>
                     <div class="form-group"><label class="form-label">Role *</label>
-                        <select name="role" id="uRole" class="form-control">
+                        <select name="role" id="uRole" class="form-control" onchange="toggleSupplierSelect()">
                             <option value="cashier">💳 Cashier</option>
                             <option value="supplier">🚚 Supplier</option>
                             <option value="customer">🛍️ Customer</option>
                             <option value="admin">👑 Admin</option>
                         </select>
                     </div>
+                </div>
+                <div class="form-group" id="supplierGroup" style="display:none;">
+                    <label class="form-label">Link to Supplier *</label>
+                    <select name="supplier_id" id="uSupplierId" class="form-control">
+                        <option value="">-- Select Supplier --</option>
+                        <?php 
+                        $suppliers = $db->query("SELECT id, name FROM suppliers WHERE status='active' ORDER BY name ASC")->fetchAll();
+                        foreach($suppliers as $s): ?>
+                            <option value="<?= $s['id'] ?>"><?= htmlspecialchars($s['name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
                 <div class="form-row cols-2">
                     <div class="form-group"><label class="form-label" id="pwLabel">Password *</label><input type="password" name="password" id="uPw" class="form-control" placeholder="Leave blank to keep current"></div>
@@ -81,7 +92,7 @@ async function loadUsers(){
             <td><span class="badge ${u.status==='active'?'badge-green':'badge-red'}">${u.status}</span></td>
             <td style="font-size:11px;color:var(--text-muted);">${u.last_login?new Date(u.last_login).toLocaleString('en-LK'):'Never'}</td>
             <td><div style="display:flex;gap:6px;">
-                <button class="btn btn-sm btn-blue" onclick="editUser(${u.id},'${escHtml(u.name)}','${u.username}','${u.email||''}','${u.role}','${u.status}')"><i class="bi bi-pencil"></i> Edit</button>
+                <button class="btn btn-sm btn-blue" onclick="editUser(${u.id},'${escHtml(u.name)}','${u.username}','${u.email||''}','${u.role}','${u.status}',${u.supplier_id||0})"><i class="bi bi-pencil"></i> Edit</button>
                 <button class="btn btn-sm btn-danger" onclick="disableUser(${u.id},'${escHtml(u.name)}')"><i class="bi bi-person-x"></i></button>
             </div></td>
         </tr>`;
@@ -90,13 +101,32 @@ async function loadUsers(){
     document.getElementById('userTableWrap').innerHTML=html;
 }
 
-function editUser(id,name,uname,email,role,status){
+function addUser() {
+    document.getElementById('userId').value = 0;
+    document.getElementById('userModalTitle').textContent = 'Add User';
+    document.getElementById('userForm').reset();
+    document.getElementById('pwLabel').textContent = 'Password *';
+    document.getElementById('uPw').required = true;
+    document.getElementById('uSupplierId').value = '';
+    toggleSupplierSelect();
+    openModal('userModal');
+}
+
+function editUser(id,name,uname,email,role,status,supplierId){
     document.getElementById('userId').value=id; document.getElementById('userModalTitle').textContent='Edit User';
     document.getElementById('uName').value=name; document.getElementById('uUsername').value=uname;
     document.getElementById('uEmail').value=email; document.getElementById('uRole').value=role;
     document.getElementById('uStatus').value=status; document.getElementById('uPw').value='';
+    document.getElementById('uPw').required = false;
+    document.getElementById('uSupplierId').value = supplierId || '';
     document.getElementById('pwLabel').textContent='Password (leave blank to keep current)';
     openModal('userModal');
+    toggleSupplierSelect();
+}
+
+function toggleSupplierSelect() {
+    const role = document.getElementById('uRole').value;
+    document.getElementById('supplierGroup').style.display = (role === 'supplier') ? 'block' : 'none';
 }
 
 async function saveUser(){

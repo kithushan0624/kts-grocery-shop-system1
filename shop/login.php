@@ -58,7 +58,10 @@ require_once 'includes/header.php';
                 <input type="text" name="login" class="form-control" placeholder="Enter your phone, email or username" required autofocus>
             </div>
             <div class="form-group">
-                <label class="form-label">Password</label>
+                <label class="form-label" style="display:flex;justify-content:space-between;align-items:center;">
+                    Password 
+                    <a href="forgot_password.php" style="font-size:12px;font-weight:500;">Forgot Password?</a>
+                </label>
                 <input type="password" name="password" class="form-control" placeholder="Enter your password" required>
             </div>
             <button type="submit" class="btn btn-primary btn-lg" style="width:100%;justify-content:center;">

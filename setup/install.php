@@ -313,8 +313,8 @@ try {
     $supplierExists = $pdo->query("SELECT COUNT(*) as cnt FROM users WHERE username='supplier'")->fetch();
     if ($supplierExists['cnt'] == 0) {
         $hash = password_hash('supplier123', PASSWORD_DEFAULT);
-        $pdo->prepare("INSERT INTO users (name, username, email, password, role) VALUES (?,?,?,?,?)")
-            ->execute(['Supplier User', 'supplier', 'supplier@kts.lk', $hash, 'supplier']);
+        $pdo->prepare("INSERT INTO users (name, username, email, password, role, supplier_id) VALUES (?,?,?,?,?,?)")
+            ->execute(['Supplier User', 'supplier', 'supplier@kts.lk', $hash, 'supplier', 1]);
         $messages[] = "<i class='bi bi-check-circle-fill'></i> Supplier user created. Username: <strong>supplier</strong> | Password: <strong>supplier123</strong>";
     }
 

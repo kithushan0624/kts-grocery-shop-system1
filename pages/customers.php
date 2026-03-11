@@ -20,7 +20,7 @@ $db = getDB();
 <div class="page-content">
     <div class="page-header">
         <div><h1>Customers <i class="bi bi-people" style="color:var(--accent);"></i></h1><p>Manage customer records and purchase history</p></div>
-        <div class="header-actions"><button class="btn btn-primary" onclick="openModal('custModal')"><i class="bi bi-plus-lg"></i> Add Customer</button></div>
+        <div class="header-actions"><button class="btn btn-primary" onclick="addCustomer()"><i class="bi bi-plus-lg"></i> Add Customer</button></div>
     </div>
     <div class="search-bar">
         <div class="search-input-wrap"><span class="search-icon"><i class="bi bi-search"></i></span><input type="text" id="custSearch" class="form-control" placeholder="Search by name, phone or email..."></div>
@@ -41,6 +41,10 @@ $db = getDB();
                     <div class="form-group"><label class="form-label">Phone</label><input type="text" name="phone" id="cPhone" class="form-control" placeholder="07X XXX XXXX"></div>
                 </div>
                 <div class="form-group"><label class="form-label">Email</label><input type="email" name="email" id="cEmail" class="form-control" placeholder="email@example.com"></div>
+                <div class="form-row cols-2">
+                    <div class="form-group"><label class="form-label">Username</label><input type="text" name="username" id="cUsername" class="form-control" placeholder="Account username"></div>
+                    <div class="form-group"><label class="form-label">Password</label><input type="password" name="password" id="cPassword" class="form-control" placeholder="Leave blank to keep current"></div>
+                </div>
                 <div class="form-group"><label class="form-label">Address</label><textarea name="address" id="cAddress" class="form-control" rows="2" placeholder="Address..."></textarea></div>
             </form>
         </div>
@@ -89,7 +93,13 @@ async function loadCustomers() {
     document.getElementById('custTableWrap').innerHTML=html;
 }
 
-function openAddModal() { document.getElementById('custId').value=0; document.getElementById('custModalTitle').textContent='Add Customer'; document.getElementById('custForm').reset(); openModal('custModal'); }
+function addCustomer() { 
+    document.getElementById('custId').value=0; 
+    document.getElementById('custModalTitle').textContent='Add Customer'; 
+    document.getElementById('custForm').reset(); 
+    if (document.getElementById('cPassword')) document.getElementById('cPassword').required = true;
+    openModal('custModal'); 
+}
 
 async function editCustomer(id) {
     const res = await apiCall(`../api/customers/index.php?action=get&id=${id}`);
@@ -97,7 +107,9 @@ async function editCustomer(id) {
     const c=res.data;
     document.getElementById('custId').value=c.id; document.getElementById('custModalTitle').textContent='Edit Customer';
     document.getElementById('cName').value=c.name; document.getElementById('cPhone').value=c.phone||'';
-    document.getElementById('cEmail').value=c.email||''; document.getElementById('cAddress').value=c.address||'';
+    document.getElementById('cEmail').value=c.email||''; document.getElementById('cUsername').value=c.username||'';
+    document.getElementById('cAddress').value=c.address||''; document.getElementById('cPassword').value='';
+    if (document.getElementById('cPassword')) document.getElementById('cPassword').required = false;
     openModal('custModal');
 }
 

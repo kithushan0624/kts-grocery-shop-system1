@@ -7,7 +7,7 @@ header('Content-Type: application/json');
 $action = $_GET['action'] ?? '';
 
 if (($action === 'list' || $action === '') && $_SERVER['REQUEST_METHOD'] === 'GET') {
-    $stmt=$db->query("SELECT id, name, username, email, role, status, last_login, created_at FROM users ORDER BY created_at DESC");
+    $stmt=$db->query("SELECT id, name, username, email, role, status, last_login, created_at, supplier_id FROM users ORDER BY created_at DESC");
     jsonResponse(['success'=>true,'data'=>$stmt->fetchAll()]);
 }
 if($_SERVER['REQUEST_METHOD']==='POST'){
@@ -16,12 +16,13 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $id=(int)($_POST['id']??0);
         $name=trim($_POST['name']??''); $username=trim($_POST['username']??'');
         $email=trim($_POST['email']??''); $role=$_POST['role']??'cashier'; $status=$_POST['status']??'active';
+        $supplierId = !empty($_POST['supplier_id']) ? (int)$_POST['supplier_id'] : null;
         if(!$name||!$username) jsonResponse(['success'=>false,'message'=>'Name and username required']);
         if($id>0){
             // Check username unique (except self)
             $ck=$db->prepare("SELECT id FROM users WHERE username=? AND id!=?"); $ck->execute([$username,$id]);
             if($ck->fetch()) jsonResponse(['success'=>false,'message'=>'Username already taken']);
-            $db->prepare("UPDATE users SET name=?,username=?,email=?,role=?,status=? WHERE id=?")->execute([$name,$username,$email,$role,$status,$id]);
+            $db->prepare("UPDATE users SET name=?,username=?,email=?,role=?,status=?,supplier_id=? WHERE id=?")->execute([$name,$username,$email,$role,$status,$supplierId,$id]);
             // Change password if provided
             if(!empty($_POST['password'])) {
                 $db->prepare("UPDATE users SET password=? WHERE id=?")->execute([password_hash($_POST['password'],PASSWORD_DEFAULT),$id]);
@@ -34,7 +35,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $ck=$db->prepare("SELECT id FROM users WHERE username=?"); $ck->execute([$username]);
             if($ck->fetch()) jsonResponse(['success'=>false,'message'=>'Username already taken']);
             $hash=password_hash($pw,PASSWORD_DEFAULT);
-            $db->prepare("INSERT INTO users (name,username,email,password,role,status) VALUES (?,?,?,?,?,?)")->execute([$name,$username,$email,$hash,$role,$status]);
+            $db->prepare("INSERT INTO users (name,username,email,password,role,status,supplier_id) VALUES (?,?,?,?,?,?,?)")->execute([$name,$username,$email,$hash,$role,$status,$supplierId]);
             $newId=$db->lastInsertId();
             logAudit('ADD_USER','users',$newId,"Added user: $username");
             jsonResponse(['success'=>true,'message'=>'User created.','id'=>$newId]);
