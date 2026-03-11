@@ -4,9 +4,9 @@ checkAuth(['admin']);
 require_once '../../config/db.php';
 $db = getDB();
 header('Content-Type: application/json');
-$action = $_GET['action'] ?? 'list';
+$action = $_GET['action'] ?? '';
 
-if ($action === 'list' || ($action === '' && $_SERVER['REQUEST_METHOD'] === 'GET')) {
+if (($action === 'list' || $action === '') && $_SERVER['REQUEST_METHOD'] === 'GET') {
     $search=trim($_GET['search']??'');
     $sql="SELECT e.*, u.username, u.role as user_role FROM employees e LEFT JOIN users u ON e.user_id=u.id WHERE e.status='active'";
     $params=[];

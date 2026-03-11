@@ -51,7 +51,7 @@ $weeklySales = $db->query("
 
 // Top products
 $topProducts = $db->query("
-    SELECT p.name, SUM(si.quantity) as qty_sold
+    SELECT p.name, SUM(si.quantity) as qty_sold, SUM(si.total - (p.cost_price * si.quantity)) as profit
     FROM sale_items si JOIN products p ON si.product_id=p.id
     JOIN sales s ON si.sale_id=s.id
     WHERE s.status='completed' AND MONTH(s.created_at)=MONTH(CURDATE())
@@ -123,9 +123,9 @@ $topQtys = json_encode(array_column($topProducts, 'qty_sold'));
         <div class="stat-card green">
             <div class="stat-icon green"><i class="bi bi-cash-coin"></i></div>
             <div class="stat-info">
-                <div class="stat-label">Today's POS Sales</div>
+                <div class="stat-label">Today's Sales</div>
                 <div class="stat-value text-green"><?= CURRENCY ?> <?= number_format($todayStats['total_sales'], 2) ?></div>
-                <div class="stat-change"><?= $todayStats['trans_count'] ?> register transactions</div>
+                <div class="stat-change"><?= $todayStats['trans_count'] ?> transactions today</div>
             </div>
         </div>
         <div class="stat-card blue">
@@ -275,7 +275,7 @@ $topQtys = json_encode(array_column($topProducts, 'qty_sold'));
         </div>
         <div class="table-container" style="border:none;border-radius:0;">
             <table class="table">
-                <thead><tr><th>#</th><th>Product</th><th>Qty Sold</th><th>Performance</th></tr></thead>
+                <thead><tr><th>#</th><th>Product</th><th>Qty Sold</th><th>Profit</th><th>Performance</th></tr></thead>
                 <tbody>
                 <?php $maxQty = max(array_column($topProducts,'qty_sold')) ?: 1; ?>
                 <?php foreach ($topProducts as $i => $p): ?>
@@ -283,6 +283,7 @@ $topQtys = json_encode(array_column($topProducts, 'qty_sold'));
                     <td style="color:var(--text-muted);"><?= $i+1 ?></td>
                     <td style="font-weight:500;"><?= htmlspecialchars($p['name']) ?></td>
                     <td><span class="badge badge-blue"><?= $p['qty_sold'] ?> units</span></td>
+                    <td style="font-weight:700;color:var(--accent);"><?= CURRENCY ?> <?= number_format($p['profit'],2) ?></td>
                     <td style="min-width:120px;">
                         <div class="progress">
                             <div class="progress-bar green" style="width:<?= round(($p['qty_sold']/$maxQty)*100) ?>%"></div>

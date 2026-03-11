@@ -4,9 +4,9 @@ checkAuth(['admin','cashier','supplier']);
 require_once '../../config/db.php';
 $db = getDB();
 header('Content-Type: application/json');
-$action = $_GET['action'] ?? 'list';
+$action = $_GET['action'] ?? '';
 
-if ($action === 'list' || ($action === '' && $_SERVER['REQUEST_METHOD'] === 'GET')) {
+if (($action === 'list' || $action === '') && $_SERVER['REQUEST_METHOD'] === 'GET') {
     $search = trim($_GET['search']??'');
     $id = (int)($_GET['id'] ?? 0);
     $sql = "SELECT * FROM suppliers WHERE status='active'";

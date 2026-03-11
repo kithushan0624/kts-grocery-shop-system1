@@ -4,9 +4,9 @@ requireRole('admin');
 require_once '../../config/db.php';
 $db = getDB();
 header('Content-Type: application/json');
-$action = $_GET['action'] ?? 'list';
+$action = $_GET['action'] ?? '';
 
-if ($action === 'list' || ($action === '' && $_SERVER['REQUEST_METHOD'] === 'GET')) {
+if (($action === 'list' || $action === '') && $_SERVER['REQUEST_METHOD'] === 'GET') {
     $stmt=$db->query("SELECT id, name, username, email, role, status, last_login, created_at FROM users ORDER BY created_at DESC");
     jsonResponse(['success'=>true,'data'=>$stmt->fetchAll()]);
 }

@@ -4,9 +4,9 @@ checkAuth(['admin','cashier']);
 require_once '../../config/db.php';
 $db = getDB();
 header('Content-Type: application/json');
-$action = $_GET['action'] ?? 'list';
+$action = $_GET['action'] ?? '';
 
-if ($action === 'list' || ($action === '' && $_SERVER['REQUEST_METHOD'] === 'GET')) {
+if (($action === 'list' || $action === '') && $_SERVER['REQUEST_METHOD'] === 'GET') {
     $search = trim($_GET['search'] ?? '');
     $sql = "SELECT * FROM customers WHERE 1=1";
     $params = [];
