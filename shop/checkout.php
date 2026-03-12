@@ -8,6 +8,9 @@ if (!$isLoggedIn) { header('Location: login.php?redirect=checkout.php'); exit; }
 
 $pageTitle = "Checkout";
 require_once 'includes/header.php';
+?>
+<script src="https://www.payhere.lk/lib/payhere.js"></script>
+<?php
 
 $stmt = $db->prepare("SELECT * FROM customers WHERE id = ?");
 $stmt->execute([$_SESSION['customer_id']]);
@@ -134,7 +137,7 @@ $zones = $db->query("SELECT * FROM delivery_zones ORDER BY name ASC")->fetchAll(
                 </div>
                 <div class="checkout-vat-note">VAT included, where applicable</div>
                 
-                <button class="checkout-proceed-btn" onclick="placeOrder()" id="placeOrderBtn">
+                <button type="button" class="checkout-proceed-btn" onclick="placeOrder()" id="placeOrderBtn">
                     PROCEED TO PAY
                 </button>
             </div>
@@ -377,9 +380,143 @@ function placeOrder() {
     if (paymentMethod === 'card') {
         const total = calculateCurrentTotal();
         document.getElementById('modalPayable').textContent = total.toFixed(2);
-        document.getElementById('paymentOverlay').style.display = 'flex';
+        
+        // Use PayHere SDK instead of local dummy modal
+        initiatePayHerePayment();
     } else {
         finalizeOrder('unpaid');
+    }
+}
+
+async function initiatePayHerePayment() {
+    const total = calculateCurrentTotal();
+    const subtotal = window.SHOP_CART.getTotal();
+    const deliveryType = document.querySelector('input[name="delivery_type"]:checked').value;
+    const zoneId = deliveryType === 'delivery' ? document.getElementById('deliveryZone').value : null;
+    const charge = parseFloat(document.getElementById('checkoutCharge').textContent.split(' ')[1]) || 0;
+    const deliveryAddress = document.getElementById('deliveryAddress').value;
+
+    const btn = document.getElementById('placeOrderBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="loading-spinner" style="width:20px;height:20px;border-width:2px;margin:0;"></div> Initializing...';
+
+    const cart = window.SHOP_CART.items;
+
+    // 1. Create order as 'pending'
+    const orderPayload = {
+        action: 'place_order',
+        delivery_address: deliveryAddress,
+        total: total,
+        delivery_type: deliveryType,
+        delivery_zone_id: zoneId,
+        delivery_charge: charge,
+        notes: document.getElementById('orderNotes').value,
+        payment_method: 'card',
+        payment_status: 'pending',
+        items: cart.map(i => ({ id: i.id, quantity: i.quantity, price: parseFloat(i.price) || 0 }))
+    };
+
+    try {
+        console.log("Placing pending order...", orderPayload);
+        const orderRes = await fetch('../api/online_orders.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(orderPayload)
+        });
+        
+        const orderText = await orderRes.text();
+        console.log("Order Response:", orderText);
+        let orderData;
+        try {
+            orderData = JSON.parse(orderText);
+        } catch(e) {
+            throw new Error('Invalid server response during order placement. See console.');
+        }
+
+        if (!orderData.success) {
+            throw new Error(orderData.message || 'Failed to create order');
+        }
+
+        const orderNumber = orderData.order_number;
+
+        // 2. Get Secure Hash from PHP
+        console.log("Fetching PayHere hash for order:", orderNumber);
+        const hashRes = await fetch('../api/online_orders.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'get_payhere_hash',
+                order_id: orderNumber,
+                amount: total
+            })
+        });
+        
+        const hashText = await hashRes.text();
+        console.log("Hash Response:", hashText);
+        let hashData;
+        try {
+            hashData = JSON.parse(hashText);
+        } catch(e) {
+            throw new Error('Invalid server response during hash generation. See console.');
+        }
+
+        if (!hashData.success) {
+            throw new Error('Failed to generate payment hash');
+        }
+
+        // 3. Configure PayHere Payment Object
+        const payment = {
+            sandbox: true,
+            merchant_id: hashData.merchant_id,
+            return_url: window.location.origin + '/kts_grocery/shop/payment_success.php',
+            cancel_url: window.location.origin + '/kts_grocery/shop/payment_cancel.php',
+            notify_url: window.location.origin + '/kts_grocery/payhere_notify.php',
+            order_id: orderNumber,
+            items: "Online Grocery Order",
+            amount: total.toFixed(2),
+            currency: "LKR",
+            hash: hashData.hash,
+            first_name: "<?= htmlspecialchars(explode(' ', $customer['name'])[0]) ?>",
+            last_name: "<?= htmlspecialchars(explode(' ', $customer['name'])[1] ?? 'Customer') ?>",
+            email: "<?= htmlspecialchars($customer['email'] ?? 'test@example.com') ?>",
+            phone: "<?= htmlspecialchars($customer['phone'] ?? '') ?>",
+            address: "<?= str_replace(["\r", "\n"], ' ', htmlspecialchars($customer['address'] ?? '')) ?>",
+            city: "Colombo",
+            country: "Sri Lanka"
+        };
+        
+        console.log("Starting PayHere payment...", payment);
+
+        // 4. Start PayHere Popup
+        if (typeof payhere === 'undefined') {
+            throw new Error('PayHere SDK not loaded. Please check your internet connection or ad blocker.');
+        }
+
+        payhere.onCompleted = function onCompleted(orderId) {
+            console.log("Payment completed. OrderID:" + orderId);
+            window.SHOP_CART.clear();
+            window.location.href = 'payment_success.php';
+        };
+
+        payhere.onDismissed = function onDismissed() {
+            showToast('Payment window closed', 'info');
+            btn.disabled = false;
+            btn.innerHTML = 'PROCEED TO PAY';
+        };
+
+        payhere.onError = function onError(error) {
+            showToast('Payment Error: ' + error, 'error');
+            btn.disabled = false;
+            btn.innerHTML = 'PROCEED TO PAY';
+        };
+
+        payhere.startPayment(payment);
+
+    } catch (e) {
+        console.error("PayHere Error:", e);
+        showToast(e.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = 'PROCEED TO PAY';
     }
 }
 

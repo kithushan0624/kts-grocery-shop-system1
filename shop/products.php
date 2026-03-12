@@ -7,12 +7,30 @@ $catId = $_GET['cat'] ?? 'all';
 
 $categories = $db->query("SELECT * FROM categories ORDER BY name")->fetchAll();
 
+// Pagination
+$limit = 20;
+$page = (int)($_GET['page'] ?? 1);
+$offset = ($page - 1) * $limit;
+
 // Build query
-$sql = "SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id=c.id WHERE p.status='active'";
+$where = "WHERE p.status='active'";
 $params = [];
-if ($search) { $sql .= " AND p.name LIKE ?"; $params[] = "%$search%"; }
-if ($catId !== 'all' && is_numeric($catId)) { $sql .= " AND p.category_id = ?"; $params[] = $catId; }
-$sql .= " ORDER BY p.name ASC";
+if ($search) { $where .= " AND p.name LIKE ?"; $params[] = "%$search%"; }
+if ($catId !== 'all' && is_numeric($catId)) { $where .= " AND p.category_id = ?"; $params[] = $catId; }
+
+// Get total for pagination
+$totalStmt = $db->prepare("SELECT COUNT(*) FROM products p $where");
+$totalStmt->execute($params);
+$total = $totalStmt->fetchColumn();
+$totalPages = ceil($total / $limit);
+
+$sql = "SELECT p.*, c.name as category_name 
+        FROM products p 
+        LEFT JOIN categories c ON p.category_id=c.id 
+        $where 
+        ORDER BY p.name ASC 
+        LIMIT $limit OFFSET $offset";
+
 $stmt = $db->prepare($sql);
 $stmt->execute($params);
 $products = $stmt->fetchAll();
@@ -85,7 +103,7 @@ $products = $stmt->fetchAll();
                         $lowStock = $p['quantity'] > 0 && $p['quantity'] <= ($p['min_stock'] ?? 5);
                         $priceDisplay = ($p['sale_type'] === 'weight' || $p['sale_type'] === 'volume')
                             ? htmlspecialchars($currency) . ' ' . number_format($p['price_per_measure'], 2) . '<span class="unit">/' . ($p['sale_type']==='weight'?'kg':'L') . '</span>'
-                            : htmlspecialchars($currency) . ' ' . number_format($p['price'], 2);
+                            : htmlspecialchars($currency) . ' ' . number_format($p['price'], 2) . '<span class="unit">/ Unit</span>';
                     ?>
                         <div class="product-card" onclick="window.location.href='product.php?id=<?= $p['id'] ?>'">
                             <?php if (!$inStock): ?>
@@ -103,20 +121,29 @@ $products = $stmt->fetchAll();
                                 <?php endif; ?>
                             </div>
                             <div class="p-body">
-                                <div class="p-category"><?= htmlspecialchars($p['category_name'] ?? 'Uncategorized') ?></div>
+                                <button class="p-add-btn"
+                                        onclick="event.stopPropagation(); addToCart(<?= $p['id'] ?>, '<?= addslashes($p['name']) ?>', <?= $p['price'] ?>, '<?= $p['sale_type'] ?>', <?= $p['price_per_measure'] ?>, '<?= $p['image'] ?>')"
+                                        <?= $inStock ? '' : 'disabled' ?>>
+                                    <i class="bi bi-plus"></i> Add
+                                </button>
+                                <div class="p-price"><?= $priceDisplay ?></div>
                                 <div class="p-name"><?= htmlspecialchars($p['name']) ?></div>
-                                <div class="p-footer">
-                                    <div class="p-price"><?= $priceDisplay ?></div>
-                                    <button class="p-add-btn"
-                                            onclick="event.stopPropagation(); addToCart(<?= $p['id'] ?>, '<?= addslashes($p['name']) ?>', <?= $p['price'] ?>, '<?= $p['sale_type'] ?>', <?= $p['price_per_measure'] ?>, '<?= $p['image'] ?>')"
-                                            <?= $inStock ? '' : 'disabled' ?>>
-                                        <i class="bi bi-plus"></i>
-                                    </button>
-                                </div>
                             </div>
                         </div>
                     <?php endforeach; ?>
                 </div>
+
+                <!-- Pagination -->
+                <?php if ($totalPages > 1): ?>
+                    <div class="pagination">
+                        <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                            <a href="products.php?page=<?= $i ?>&search=<?= urlencode($search) ?>&cat=<?= $catId ?>" 
+                               class="page-btn <?= $i == $page ? 'active' : '' ?>">
+                                <?= $i ?>
+                            </a>
+                        <?php endfor; ?>
+                    </div>
+                <?php endif; ?>
             <?php endif; ?>
         </div>
     </div>

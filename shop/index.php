@@ -152,7 +152,7 @@ fetch('../api/products/index.php?action=list')
 
         grid.innerHTML = data.map(p => {
             const price = p.sale_type === 'unit'
-                ? `${window.APP_CURRENCY} ${parseFloat(p.price).toFixed(2)}`
+                ? `${window.APP_CURRENCY} ${parseFloat(p.price).toFixed(2)}<span class="unit">/ Unit</span>`
                 : `${window.APP_CURRENCY} ${parseFloat(p.price_per_measure).toFixed(2)}<span class="unit">/${p.sale_type==='weight'?'kg':'L'}</span>`;
             const imgHtml = p.image
                 ? `<img src="../${p.image}" alt="${escHtml(p.name)}">`
@@ -162,14 +162,11 @@ fetch('../api/products/index.php?action=list')
                 <div class="p-badge in-stock">In Stock</div>
                 <div class="p-image">${imgHtml}</div>
                 <div class="p-body">
-                    <div class="p-category">${p.category_name || 'Uncategorized'}</div>
+                    <button class="p-add-btn" onclick="event.stopPropagation(); addToCart(${p.id}, '${p.name.replace(/'/g,"\\'")}', ${p.price}, '${p.sale_type}', ${p.price_per_measure}, '${p.image||''}')">
+                        <i class="bi bi-plus"></i> Add
+                    </button>
+                    <div class="p-price">${price}</div>
                     <div class="p-name">${escHtml(p.name)}</div>
-                    <div class="p-footer">
-                        <div class="p-price">${price}</div>
-                        <button class="p-add-btn" onclick="event.stopPropagation(); addToCart(${p.id}, '${p.name.replace(/'/g,"\\'")}', ${p.price}, '${p.sale_type}', ${p.price_per_measure}, '${p.image||''}')">
-                            <i class="bi bi-plus"></i>
-                        </button>
-                    </div>
                 </div>
             </div>`;
         }).join('');

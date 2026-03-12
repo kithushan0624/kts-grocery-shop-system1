@@ -583,7 +583,10 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 .p-badge.low-stock { background: var(--shop-amber-light); color: var(--shop-amber); border: 1px solid rgba(245,158,11,0.2); }
 .p-badge.out-of-stock { background: var(--shop-red-light); color: var(--shop-red); border: 1px solid rgba(239,68,68,0.2); }
 .product-card .p-body {
-  padding: 18px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 .product-card .p-category {
   font-size: 11px;
@@ -594,11 +597,11 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   margin-bottom: 6px;
 }
 .product-card .p-name {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--shop-text);
-  margin-bottom: 12px;
-  line-height: 1.3;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--shop-text-secondary);
+  margin-bottom: 0;
+  line-height: 1.4;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   line-clamp: 2;
@@ -611,31 +614,40 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   justify-content: space-between;
 }
 .product-card .p-price {
-  font-size: 20px;
-  font-weight: 800;
-  color: var(--shop-accent);
+  font-size: 16px;
+  font-weight: 700;
+  color: #16a34a; /* Green price */
+  margin-bottom: 4px;
 }
 .product-card .p-price .unit {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
-  color: var(--shop-text-muted);
+  color: #16a34a;
 }
 .product-card .p-add-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  border: none;
-  background: var(--shop-accent);
-  color: #fff;
-  font-size: 18px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  color: #4b5563;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  border-radius: var(--shop-radius);
+  transition: all 0.2s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  margin-bottom: 12px;
 }
 .product-card .p-add-btn:hover {
-  background: var(--shop-accent-dark);
+  background: #f9fafb;
+  border-color: #d1d5db;
+  color: #111827;
+}
+.product-card .p-add-btn i {
+  font-size: 16px;
+  color: #9ca3af;
 }
 .product-card .p-add-btn:disabled {
   background: var(--shop-surface-hover);

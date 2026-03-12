@@ -124,7 +124,7 @@ $topQtys = json_encode(array_column($topProducts, 'qty_sold'));
             <div class="stat-icon green"><i class="bi bi-cash-coin"></i></div>
             <div class="stat-info">
                 <div class="stat-label">Today's Sales</div>
-                <div class="stat-value text-green"><?= CURRENCY ?>&nbsp;<?= number_format($todayStats['total_sales'], 2) ?></div>
+                <div class="stat-value text-green sales-amount">Rs. <?= number_format($todayStats['total_sales'], 2) ?></div>
                 <div class="stat-change"><?= $todayStats['trans_count'] ?> transactions today</div>
             </div>
         </div>

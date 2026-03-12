@@ -13,19 +13,41 @@ if ($action === 'list' || ($action === '' && $_SERVER['REQUEST_METHOD'] === 'GET
     $search = trim($_GET['search'] ?? '');
     $category = $_GET['category'] ?? '';
     $status = $_GET['status'] ?? 'active';
+    $limit = (int)($_GET['limit'] ?? 20);
+    $page = (int)($_GET['page'] ?? 1);
+    $offset = ($page - 1) * $limit;
+
+    $where = "WHERE 1=1";
+    $params = [];
+    if ($search) { $where .= " AND (p.name LIKE ? OR p.barcode LIKE ?)"; $params[] = "%$search%"; $params[] = "%$search%"; }
+    if ($category) { $where .= " AND p.category_id = ?"; $params[] = $category; }
+    if ($status) { $where .= " AND p.status = ?"; $params[] = $status; }
+
+    // Get total count
+    $countStmt = $db->prepare("SELECT COUNT(*) FROM products p $where");
+    $countStmt->execute($params);
+    $total = (int)$countStmt->fetchColumn();
 
     $sql = "SELECT p.*, c.name as category_name, s.name as supplier_name
             FROM products p
             LEFT JOIN categories c ON p.category_id=c.id
             LEFT JOIN suppliers s ON p.supplier_id=s.id
-            WHERE 1=1";
-    $params = [];
-    if ($search) { $sql .= " AND (p.name LIKE ? OR p.barcode LIKE ?)"; $params[] = "%$search%"; $params[] = "%$search%"; }
-    if ($category) { $sql .= " AND p.category_id = ?"; $params[] = $category; }
-    if ($status) { $sql .= " AND p.status = ?"; $params[] = $status; }
-    $sql .= " ORDER BY p.name ASC";
-    $stmt = $db->prepare($sql); $stmt->execute($params);
-    jsonResponse(['success'=>true,'data'=>$stmt->fetchAll()]);
+            $where
+            ORDER BY p.name ASC
+            LIMIT $limit OFFSET $offset";
+    
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    jsonResponse([
+        'success' => true,
+        'data' => $stmt->fetchAll(),
+        'pagination' => [
+            'total' => $total,
+            'limit' => $limit,
+            'page' => $page,
+            'pages' => ceil($total / $limit)
+        ]
+    ]);
 }
 
 if ($action === 'get') {
