@@ -100,6 +100,8 @@ input, select, textarea { font-family: inherit; }
   gap: 12px;
   text-decoration: none;
   color: var(--shop-text);
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 .shop-nav-logo .logo-icon {
   width: 40px;
@@ -116,6 +118,9 @@ input, select, textarea { font-family: inherit; }
   font-size: 18px;
   font-weight: 800;
   letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
 }
 .shop-nav-logo .logo-text .sub {
   font-weight: 400;
@@ -1662,7 +1667,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   opacity: 1;
 }
 .mobile-search-bar {
-  display: none;
+  display: none !important;
 }
 
 /* ===== RESPONSIVE ===== */
@@ -1736,7 +1741,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   }
   /* Mobile search inside menu */
   .mobile-search-bar {
-    display: block;
+    display: block !important;
     margin-bottom: 12px;
     padding-bottom: 12px;
     border-bottom: 1px solid var(--shop-border);
